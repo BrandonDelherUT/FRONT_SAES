@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'admin/admin_home_screen.dart';
+import 'user/user_home_screen.dart';
 import 'user_management_screen.dart';
-import 'user_register_screen.dart';
+import 'user/user_register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -20,56 +22,66 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Función para iniciar sesión
   Future<void> loginUser(String username, String password, {String? newPassword}) async {
-  final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/login');
-  try {
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({
-        'username': username,
-        'password': password,
-        if (newPassword != null) 'newPassword': newPassword,  // Agrega newPassword si está presente
-      }),
-    );
+    final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/login');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'username': username,
+          'password': password,
+          if (newPassword != null) 'newPassword': newPassword,  // Agrega newPassword si está presente
+        }),
+      );
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
 
-      // Comprueba si se han recibido los tokens
-      if (data.containsKey('id_token') && data.containsKey('access_token')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Inicio de sesión exitoso')),
-        );
-        // Aquí puedes almacenar los tokens si lo necesitas
-        // Ejemplo: Almacenar en SharedPreferences
+        // Comprueba si se han recibido los tokens y el rol del usuario
+        if (data.containsKey('id_token') && data.containsKey('access_token') && data.containsKey('role')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Inicio de sesión exitoso')),
+          );
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
-        );
+          String role = data['role'];
+
+          // Redirige a la pantalla adecuada según el rol del usuario
+          if (role == 'admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => AdminHomeScreen()),
+            );
+          } else if (role == 'usuario') {  // assuming 'usuario' is the role returned for regular users
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => UserHomeScreen()),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Rol no reconocido')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error inesperado: ${response.body}')),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error inesperado: ${response.body}')),
+          const SnackBar(content: Text('Error al intentar iniciar sesión')),
         );
       }
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error al intentar iniciar sesión')),
+        SnackBar(content: Text('Ocurrió un error: $e')),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Ocurrió un error: $e')),
-    );
   }
-}
-
-
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'user_home_screen.dart';
+// import ´../screens/admin/admin_home_screen.dart';
+import '../admin/admin_home_screen.dart';
 
 class UserRegistrationScreen extends StatefulWidget {
   @override
@@ -64,7 +67,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
               SizedBox(
                 width: 250,
                 child: TextField(
-                  controller: emailController, // Asigna el controlador al TextField
+                  controller: emailController,
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     border: OutlineInputBorder(),
@@ -106,39 +109,66 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController newPasswordController = TextEditingController();
 
-  // Función para verificar el email
+  // Función para verificar el email y redirigir según el rol
   Future<void> verifyEmail() async {
-    final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/login');
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({
-        'username': widget.email,
-        'password': passwordController.text,
-        'newPassword': newPasswordController.text,
-      }),
-    );
+    if (passwordController.text.isEmpty || newPasswordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, complete todos los campos')),
+      );
+      return;
+    }
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['success']) {
-        // Si la verificación y cambio de contraseña son exitosos
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cambio de contraseña exitoso')),
-        );
-        // Puedes navegar a otra pantalla si lo deseas
+    final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/login');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'username': widget.email,
+          'password': passwordController.text,
+          'newPassword': newPasswordController.text,
+        }),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data.containsKey('role')) {
+          String role = data['role'];
+          if (role == 'admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => AdminHomeScreen()), // Pantalla para admin
+            );
+          } else if (role == 'usuario') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => UserHomeScreen()), // Pantalla para usuario
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Rol desconocido')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cambio de contraseña exitoso')),
+          );
+        }
       } else {
-        // Si el código de verificación no coincide
+        final data = json.decode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('El código de verificación no coincide')),
+          SnackBar(content: Text('Error: ${data['error_message']}')),
         );
       }
-    } else {
-      final data = json.decode(response.body);
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${data['error_message']}')),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
@@ -179,15 +209,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  if (passwordController.text.isNotEmpty && newPasswordController.text.isNotEmpty) {
-                    verifyEmail();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Por favor, complete todos los campos')),
-                    );
-                  }
-                },
+                onPressed: verifyEmail,
                 child: const Text('Verificar'),
               ),
             ],
