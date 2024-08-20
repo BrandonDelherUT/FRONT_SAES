@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'admin/admin_home_screen.dart';
 import 'user/user_home_screen.dart';
-import 'user_management_screen.dart';
 import 'user/user_register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  final FlutterSecureStorage storage;
+
+  const LoginScreen({Key? key, required this.storage}) : super(key: key);
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -20,7 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool isFirstLogin = false;
 
-  // Función para iniciar sesión
   Future<void> loginUser(String username, String password, {String? newPassword}) async {
     final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/login');
     try {
@@ -32,23 +34,28 @@ class _LoginScreenState extends State<LoginScreen> {
         body: json.encode({
           'username': username,
           'password': password,
-          if (newPassword != null) 'newPassword': newPassword,  // Agrega newPassword si está presente
+          if (newPassword != null) 'newPassword': newPassword,
         }),
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        // Comprueba si se han recibido los tokens y el rol del usuario
         if (data.containsKey('id_token') && data.containsKey('access_token') && data.containsKey('role')) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Inicio de sesión exitoso')),
           );
 
           String role = data['role'];
+          String idToken = data['id_token'];
+          Map<String, dynamic> decodedToken = JwtDecoder.decode(idToken);
+          String userId = decodedToken['sub'];  // 'sub' es comúnmente utilizado para el user ID
+
+          // Almacena los tokens y el user ID de forma segura
+          await widget.storage.write(key: 'id_token', value: idToken);
+          await widget.storage.write(key: 'access_token', value: data['access_token']);
+          await widget.storage.write(key: 'refresh_token', value: data['refresh_token']);
+          await widget.storage.write(key: 'user_id', value: userId);
 
           // Redirige a la pantalla adecuada según el rol del usuario
           if (role == 'admin') {
@@ -56,10 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
               context,
               MaterialPageRoute(builder: (context) => AdminHomeScreen()),
             );
-          } else if (role == 'usuario') {  // assuming 'usuario' is the role returned for regular users
+          } else if (role == 'usuario') {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => UserHomeScreen()),
+              MaterialPageRoute(builder: (context) => UserHomeScreen(storage: widget.storage)),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => UserRegistrationScreen()),
+                    MaterialPageRoute(builder: (context) => UserRegistrationScreen(storage: widget.storage)),
                   );
                 },
                 child: const Text(

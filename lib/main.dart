@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'presentation/screens//login_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() {
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  final FlutterSecureStorage storage = FlutterSecureStorage();
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +16,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.indigo,
       ),
-      home: LoginScreen(),
+      home: LoginScreen(storage: storage),
     );
   }
 }

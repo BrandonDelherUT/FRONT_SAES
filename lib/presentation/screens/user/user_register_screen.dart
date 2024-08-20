@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user_home_screen.dart';
-// import ´../screens/admin/admin_home_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../admin/admin_home_screen.dart';
 
 class UserRegistrationScreen extends StatefulWidget {
+  final FlutterSecureStorage storage;
+
+  UserRegistrationScreen({Key? key, required this.storage}) : super(key: key);
+
   @override
   _UserRegistrationScreenState createState() => _UserRegistrationScreenState();
 }
@@ -13,7 +17,6 @@ class UserRegistrationScreen extends StatefulWidget {
 class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   final TextEditingController emailController = TextEditingController();
 
-  // Función para validar si el email tiene un formato válido
   bool isValidEmail(String email) {
     final RegExp emailRegExp = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$',
@@ -21,7 +24,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     return emailRegExp.hasMatch(email);
   }
 
-  // Función para registrar al usuario
   Future<void> registerUser(String email) async {
     final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/users');
     final response = await http.post(
@@ -41,7 +43,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       );
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => EmailVerificationScreen(email: email)),
+        MaterialPageRoute(builder: (context) => EmailVerificationScreen(email: email, storage: widget.storage)),
       );
     } else {
       final data = json.decode(response.body);
@@ -98,8 +100,9 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
+  final FlutterSecureStorage storage;
 
-  const EmailVerificationScreen({required this.email});
+  const EmailVerificationScreen({required this.email, required this.storage});
 
   @override
   _EmailVerificationScreenState createState() => _EmailVerificationScreenState();
@@ -109,7 +112,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController newPasswordController = TextEditingController();
 
-  // Función para verificar el email y redirigir según el rol
   Future<void> verifyEmail() async {
     if (passwordController.text.isEmpty || newPasswordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -140,6 +142,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
         if (data.containsKey('role')) {
           String role = data['role'];
+
+          await widget.storage.write(key: 'id_token', value: data['id_token']);
+          await widget.storage.write(key: 'access_token', value: data['access_token']);
+          await widget.storage.write(key: 'refresh_token', value: data['refresh_token']);
+
           if (role == 'admin') {
             Navigator.pushReplacement(
               context,
@@ -148,7 +155,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           } else if (role == 'usuario') {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => UserHomeScreen()), // Pantalla para usuario
+              MaterialPageRoute(builder: (context) => UserHomeScreen(storage: widget.storage)), // Pantalla para usuario
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
