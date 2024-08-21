@@ -25,7 +25,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 
   Future<void> registerUser(String email) async {
-    final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/users');
+    final url = Uri.parse('https://w3fza4o2mc.execute-api.us-east-1.amazonaws.com/Prod/users');
     final response = await http.post(
       url,
       headers: {
@@ -120,7 +120,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       return;
     }
 
-    final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/login');
+    final url = Uri.parse('https://w3fza4o2mc.execute-api.us-east-1.amazonaws.com/Prod/login');
     try {
       final response = await http.post(
         url,

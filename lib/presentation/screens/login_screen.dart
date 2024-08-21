@@ -24,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isFirstLogin = false;
 
   Future<void> loginUser(String username, String password, {String? newPassword}) async {
-    final url = Uri.parse('https://fmeywjtpla.execute-api.us-east-1.amazonaws.com/Prod/login');
+    final url = Uri.parse('https://w3fza4o2mc.execute-api.us-east-1.amazonaws.com/Prod/login');
     try {
       final response = await http.post(
         url,
